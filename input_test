@@ -1,0 +1,7 @@
+resize_factor = 12  % how much to rescale image at beginning
+boxsize = 400  % expected pixels for Relion boxes/particles
+winSize = 90 % pixels slightly smaller than fibril width 
+convlength = 800 % pixels length for thin rectangle convolution 
+grid_edge = 0.05 % threshold for sobel edge detection of grid
+ignore_sm = 28800  % area size in pixels to ignore (not try to fit fibril segment)
+T = 0.6            % threshold for binary image
