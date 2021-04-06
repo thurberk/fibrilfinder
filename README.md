@@ -9,7 +9,6 @@ https://authors.elsevier.com/sd/article/S1047-8477(21)00041-1
 Main files are:  
 
 FibrilFinder_wMask.m   locates amyloid fibrils on cryo-EM images and outputs text files compatible with a RELION 3.1 ManualPick job
-
-  Now allows use of an externally generated mask, such as from Micrograph Cleaner (Journal of Structural Biology 210 (2020) 107498)
+	Now allows use of an externally generated mask, such as from Micrograph Cleaner (Journal of Structural Biology 210 (2020) 107498)
 
 FibrilFixer.m    removes particles (image boxes) that contain more than one amyloid fibril
