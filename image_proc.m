@@ -9,7 +9,7 @@ orig_size = size(Img_raw);
 %Img_resize1 = imresize(Img_raw, 1/3);
 %Img_intensity = mat2gray(Img_resize1);
 %Img_resize = imresize(Img_intensity, 3/resize_factor);
-Img_resize = imresize(Img_raw, 1/resize_factor);
+Img_resize = imresize(Img_raw, double(1)/double(resize_factor));
 %figure
 %imagesc(Img_resize);
 %saveas(gcf,strcat(dir,'/resize.fig'));

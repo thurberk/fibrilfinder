@@ -12,14 +12,14 @@ ncols_raw = size(Img_raw,2);
 % 0 default for contraction bias, 0 for smoothing
 BW2 = activecontour(X,BW1,'Chan-Vese','SmoothFactor',0,'ContractionBias',0);
 
-%figure;
-%imagesc(BW1); 
-%colormap(gray);
-%axis equal;
-%figure;
-%imagesc(BW2); 
-%colormap(gray);
-%axis equal;
+% figure;
+% imagesc(BW1); 
+% colormap(gray);
+% axis equal;
+% figure;
+% imagesc(BW2); 
+% colormap(gray);
+% axis equal;
 
 [regions, n] = bwlabel(BW2);
 maxarea= 1;
