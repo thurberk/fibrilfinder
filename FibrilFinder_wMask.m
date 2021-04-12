@@ -159,7 +159,9 @@ end
 for a=1:mics
     % just retain the micrograph file names, not directories or extension
     if (listm==0)
-        miclist2{a} = eraseBetween(miclist{a},"MotionCorr","ML-2021-03-21/",'Boundaries','inclusive');
+        match = wildcardPattern + "/";
+        %miclist2{a} = eraseBetween(miclist{a},"MotionCorr","KT-2021-03-25/",'Boundaries','inclusive');
+        miclist2{a} = erase(miclist{a},match);
         miclist2{a} = erase(miclist2{a},".mrc");
     else
         miclist2{a} = erase(miclist{a},".mrc");
