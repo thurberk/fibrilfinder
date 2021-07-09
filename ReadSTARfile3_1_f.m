@@ -107,22 +107,42 @@ end
 
 data = textscan(fileID,read_string);
 read_string_o = read_string;
+o.totaloptics=size(data{o.nvariables},1);
 
 for a=1:o.nvariables
-    o.(o.var_names_m(a))=data{a}(:);
+    o.(o.var_names_m(a))=data{a}(1:o.totaloptics);
 end
-o.totaloptics=size(data{1},1);
-   
+
+% close, reopen, and dummy rescan to end of optics variables
+fclose(fileID);
+fileID = fopen(filename);
+dummy = textscan(fileID,'%s',o.nheader_txt);
+for a=1:o.nvariables
+    dummy = textscan(fileID,'%s',1);
+    dummy = textscan(fileID,'%s',1);
+end
+dummy = textscan(fileID,read_string,o.totaloptics);
+
 %fclose(fileID);
 % now start the particle data section
 % read in some of the file to test for header and variable info
-for a=1:200
+counter=0;
+a=0;
+while (counter<10)
+%for a=1:200
+    a=a+1;
+    counter=counter+1;
     text(a)=textscan(fileID,'%s',1);
+    if (contains(text{a},"_rln")) % test for variables, if so keep reading
+        counter=0;
+    end
 end
+readno=a;
 % test for header, variable, and data info
 first_var_num=0;
 last_var_num=0;
-for a=1:200
+for a=1:readno
+%for a=1:200
     if ((string(text{a})~="#") && (contains(text{a},"#")))
         last_var_num=a;
         if (first_var_num==0)
@@ -147,7 +167,7 @@ for a=1:o.nvariables
     ltemp=length(temp);
     o.var_names_m(a)=string(temp(2:ltemp));
 end
-data_dummy = textscan(fileID,read_string_o);
+data_dummy = textscan(fileID,read_string_o,o.totaloptics);
 % end preread of optics data
 s.header_txt=textscan(fileID,'%s',s.nheader_txt);
 for a=1:s.nvariables
