@@ -1,8 +1,9 @@
 resize_factor = 12  % how much to rescale image at beginning
-boxsize = 400  % expected pixels for Relion boxes/particles
-winSize = 80 % pixels slightly smaller than fibril width 
-convlength = 1200 % pixels length for thin rectangle convolution 
-grid_edge = 0.5 % threshold for sobel edge detection of grid
+boxsize = 500  % expected pixels for Relion boxes/particles
+winSize = 96 % pixels slightly smaller than fibril width 
+convlength = 1080 % pixels length for thin rectangle convolution 
+grid_edge = 0.3 % threshold for sobel edge detection of grid
 ignore_sm = 28800  % area size in pixels to ignore (not try to fit fibril segment)
-T = 0.6            % threshold for binary image
-maskT = 0.6        % threshold for Micrograph Cleaner mask
+T = 0.5            % threshold for binary image
+maskT = 0.75	% threshold for mask
+winDelta = 24	% "vesselness" is checked for winSize +- winDelta5

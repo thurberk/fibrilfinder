@@ -1,4 +1,4 @@
-function [Img_out,mask] = grid_remove(Img_raw,grid_edge)
+function [Img_out,mask] = grid_remove(Img_raw,grid_edge,mout,output_file)
 
 discard = 0;
 X = imresize(Img_raw,(1/4));
@@ -10,16 +10,27 @@ ncols_raw = size(Img_raw,2);
 % edge detection with threshold and gradient output
 [BW1, threshout, GV, GH] = edge(X,'sobel', grid_edge);
 % 0 default for contraction bias, 0 for smoothing
-BW2 = activecontour(X,BW1,'Chan-Vese','SmoothFactor',0,'ContractionBias',0);
-
-% figure;
-% imagesc(BW1); 
-% colormap(gray);
-% axis equal;
-% figure;
-% imagesc(BW2); 
-% colormap(gray);
-% axis equal;
+BW2 = activecontour(X,BW1,'Chan-Vese','SmoothFactor',0.5,'ContractionBias',0);
+if (mout>1)
+    figure;
+    hold on;
+    set(gca,'YDir','reverse');
+    axis equal;
+    set(gca,'visible','off');
+    imagesc(BW1); 
+    colormap(gray);
+    saveas(gcf,strcat(erase(output_file,".mat"),"grid_BW1.fig"));
+    saveas(gcf,strcat(erase(output_file,".mat"),"grid_BW1.png"));
+    figure;
+    hold on;
+    set(gca,'YDir','reverse');
+    axis equal;
+    set(gca,'visible','off');
+    imagesc(BW2); 
+    colormap(gray);
+    saveas(gcf,strcat(erase(output_file,".mat"),"grid_BW2.fig"));
+    saveas(gcf,strcat(erase(output_file,".mat"),"grid_BW2.png"));
+end
 
 [regions, n] = bwlabel(BW2);
 maxarea= 1;
@@ -103,7 +114,7 @@ for c=1:nrows
     end
 end
 % Erode mask with disk
-radius = 2;
+radius = 4;  %changed from 2 to 4 2021may24
 decomposition = 0;
 se = strel('disk', radius, decomposition);
 dirnorm = imerode(dirnorm, se);

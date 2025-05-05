@@ -19,6 +19,7 @@ Imgmod = Img;
 distflag = zeros(nrows,1);
 distflag2d = zeros(nrows,ncols);
 distlp = zeros(nrows,ncols);
+startpt_f = [0 0];
 
 while (flag==0)
     % find largest region of contour
@@ -307,7 +308,11 @@ while (flag==0)
                 end
             end
         end
-        line_dist = sqrt((startpt_f(1)-endpt_f(1))^2 + (startpt_f(2)-endpt_f(2))^2);
+        if (startpt_f(1)==0 && startpt_f(2)==0)
+            line_dist=0;
+        else
+            line_dist = sqrt((startpt_f(1)-endpt_f(1))^2 + (startpt_f(2)-endpt_f(2))^2);
+        end
         if (line_dist>min_ll && maxpts>0)
             lines=lines+1;
         end

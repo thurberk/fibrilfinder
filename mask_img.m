@@ -47,7 +47,7 @@ for a=1:nrows
                         end
                     end
                 end
-                if (counter>10000) % more than 10 pixels averaged
+                if (counter>10000 || bound>min([nrows ncols])) % more than 10 pixels averaged
                     mask_value(a,b)=sum/counter;
                     marker=0;
                 else

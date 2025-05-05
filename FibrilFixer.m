@@ -13,16 +13,21 @@
 clc;clear;close all;
 tic
 
+relionpath = uigetdir(path,'Select the relion directory');
 [file,pth] = uigetfile('particles.star','Select the relion Extract particles file');
 answer=inputdlg('How large a box size to use for overlap detection (in pixels)?'); 
 range=0.5 * str2num(answer{1});
+answer=inputdlg('Also use a mask for particle removal? 1=yes 0=no'); 
+mask=str2num(answer{1});
+if (mask==1)
+    answer=inputdlg('What is the mask threshold?'); 
+    maskT=str2num(answer{1});
+    maskpath = uigetdir(path,'Select the masks directory');
+elseif (mask~=0)
+    error("mask answer not 1 or 0.");
+end
 
-%pth(:)='/reliondir/Extract/job203/'; % relion path
-%file(:)='particles_37removed_forregrelion.star'; % 2d data.star file
 file_out(:)='particles_overlap_removed.star'; % data.star file
-
-%range = 150;  % the box used to test for overlap
-		% will be +- range = 2*range on a side
 
 filename=strcat(pth,file);
 filename_out=strcat(pth,file_out);
@@ -92,7 +97,7 @@ end
 
 keep = ones(s.totalparticles,1);
 for m=1:micrographs
-    m
+    %m
     for k=mfirstseg(m):mlastseg(m)
         pt1 = [s.rlnCoordinateX(helixstart(k)) s.rlnCoordinateY(helixstart(k))];
         pt2 = [s.rlnCoordinateX(helixstart(k)+seglength(k)-1) s.rlnCoordinateY(helixstart(k)+seglength(k)-1)];
@@ -115,6 +120,96 @@ for m=1:micrographs
         end
     end
 end
-            
+  
+if (mask==1)
+for a=1:micrographs
+    % just retain the micrograph file names, not directories or extension
+        match = wildcardPattern + "/";
+        miclist2{a} = erase(mic_names{a},match);
+        %miclist2{a} = erase(miclist2{a},".mrc");
+end
+   
+for m=1:micrographs
+    %m
+    mic2 = miclist2{m};
+    [Img_mask,ms,mmi,mma,mav]=ReadMRC(strcat(maskpath,'/',mic2));
+    [nx, ny] = size(Img_mask);
+    bin_mask=imbinarize(Img_mask,maskT);
+    for a=mstart(m):mfinish(m)
+        xs=round(s.rlnCoordinateX(a)-range);
+        xf=round(s.rlnCoordinateX(a)+range);
+        ys=round(s.rlnCoordinateY(a)-range);
+        yf=round(s.rlnCoordinateY(a)+range);
+        if (xs>=1 && xf<=nx && ys>=1 && yf<=ny)
+            if (sum(bin_mask(xs:xf,ys:yf),'all')~=0)
+                keep(a)=0;
+            end
+        end
+    end
+end          
+end    
+  
+% test plots on for first nfigures
+nfigure=0;
+for m=1:nfigure
+    %m
+    [Img,ms,mmi,mma,mav]=ReadMRC(strcat(relionpath,'/',mic_names{m}));
+    % filter the image?  
+    % gaussian style
+    sigma = 25; % 15 and 2*dev, or 10 and 3*dev work well
+    mdev = 2.0;  % color scale range in +- std deviations
+    map2 = imgaussfilt(Img, sigma);
+    dev = std(map2,0,'all');
+    mmap2 = mean(map2,'all');
+    
+    figure;
+    axis equal;
+    colormap(gray);
+    imagesc(map2, [mmap2-mdev*dev mmap2+mdev*dev]);
+    title(mic_names{m});
+    
+    figure;
+    axis equal;
+    colormap(gray);
+    imagesc(map2, [mmap2-mdev*dev mmap2+mdev*dev]);
+    title(mic_names{m});
+    hold on;
+    for a=mstart(m):mfinish(m)
+       if (keep(a)==0)
+            scatter(s.rlnCoordinateY(a), s.rlnCoordinateX(a),50,'r');
+       else
+            scatter(s.rlnCoordinateY(a), s.rlnCoordinateX(a),50,'g');
+       end
+    end
+    hold off;
+end        
+
+% now write out #_extract.star files for each micrograph
+% first copy old #_extract.star files to extractold.star
+for m=1:micrographs
+    nameparts = split(s.rlnImageName(mstart(m)),'@');
+    extractpart = erase(nameparts{2},'.mrcs');
+    extractoldname = strcat(relionpath,'/',extractpart,'_extractold.star');
+    extractname = strcat(relionpath,'/',extractpart,'_extract.star');
+    movefile(extractname, extractoldname);
+    vo.nheader_txt = s.nheader_txt;
+    vo.nvariables = s.nvariables;
+    vo.header_txt = s.header_txt;
+    vo.var_names = s.var_names;
+    vo.var_names_m = s.var_names_m;
+    vo.var_type = s.var_type;
+    counter=0;
+    for a=mstart(m):mfinish(m)
+        if (keep(a)==1)
+    	    counter=counter+1;
+            for c=1:s.nvariables
+               vo.(s.var_names_m{c})(counter)=s.(s.var_names_m{c})(a);
+            end
+        end
+    end
+    vo.totalparticles = counter;
+    WriteSTARfile_f(vo, extractname);
+end
+
 WriteSTARfile3_1_f_keep(s, o, filename_out, keep);
 toc
