@@ -2,7 +2,7 @@
 %
 %   FibrilFinder.m
 %	automatic picking of amyloid fibrils from cryo-EM images
-%	output designed for RELION 3.1
+%	output designed for RELION 3.1 or 4 or 5
 %	
 %   Author: Kent Thurber
 %   Version: 1  xx date
@@ -13,7 +13,7 @@
 %
 %   Based on:  
 %    Fibril tool: automated analysis of fibril morphology	
-%      Author: Yi Yin, INRIA Pairs (current affiliation: Uni. Oxford)
+%      Author: Yi Yin, INRIA Paris (current affiliation: Uni. Oxford)
 %      Version: April2020
 %      References: 
 %      Yi Yin et al., "Automated Quantification of Amyloid Fibrils 
@@ -51,9 +51,8 @@ close all;
 %      '20190730_01247.mrc'; '20190730_01361.mrc'; '20190730_01557.mrc'; ...
 %      '20190730_01751.mrc'; '20190730_01858.mrc'; '20190730_02041.mrc'; ...
 %      '20190730_02172.mrc'};
-miclist = {'20190206_00288.mrc'; '20190204_00140.mrc'; '20190204_00149.mrc'};% ...
-%    '20190204_00214.mrc'; '20190204_00293.mrc'; '20190204_00423.mrc'; ...
-%    '20190204_00479.mrc'; '20190204_00773.mrc'; '20190204_00788.mrc'; ...
+miclist = {'20220425_00004.mrc'; '20220425_00956.mrc'; '20220425_01629.mrc'; ...
+    '20220425_02000.mrc'; '20220425_02247.mrc'; '20220425_02397.mrc'};
 %    '20190204_00925.mrc'; '20190204_01034.mrc'; '20190204_01113.mrc'; ...
 %    '20190206_00029.mrc'; '20190206_00143.mrc'; '20190206_00243.mrc'; ...
 %    '20190206_00312.mrc'; '20190206_00328.mrc'; '20190206_00490.mrc'; ...
@@ -61,9 +60,7 @@ miclist = {'20190206_00288.mrc'; '20190204_00140.mrc'; '20190204_00149.mrc'};% .
 %relionpath = 
 %listpath = '/reliondir/MotionCorr/job010/micrographs';
 %listoutpath = '/reliondir/MatlabPick/2020aug26';
-listpath = '/reliondir/MotionCorr/job023/Micrographs';
-listoutpath = '/reliondir/MatlabPick/2020aug27';
- 
+
 answer=inputdlg('Note: if desired, start a Relion manual pick job, create masks with Micrograph Cleaner & know how many computer cores you have before starting this program (enter anything)'); 
 
 % parameter setting
@@ -84,6 +81,7 @@ grid_edge = 0;
 ignore_sm = 0;
 T = 0;
 maskT = 0;
+winDelta = 0;	% "vesselness" checked for winSize +- winDelta
 
 [file,path] = uigetfile('','Select the input parameters file');
 fileID = fopen(strcat(path,file));
@@ -105,13 +103,15 @@ temp = textscan(fileID, 'T = %f %*[^\n]', 1);
 T = temp{1};
 temp = textscan(fileID, 'maskT = %f %*[^\n]', 1);
 maskT = temp{1};
+temp = textscan(fileID, 'winDelta = %f %*[^\n]', 1);
+winDelta = temp{1};
 fclose(fileID);
 
-if ((resize_factor==0) || (boxsize==0) || (winSize==0) || (convlength==0) || (grid_edge==0) || (ignore_sm==0) || (T==0) || (maskT==0))
+if ((resize_factor==0) || (boxsize==0) || (winSize==0) || (convlength==0) || (grid_edge==0) || (ignore_sm==0) || (T==0) || (maskT==0) || (winDelta==0))
     error ('Input parameter read problem.  At least one value still 0');
 end
 
-answer=inputdlg('Read micrographs from CtfFind job micrographs_ctf.star file (enter 0) or list in Matlab (enter 1) or from directory (enter 2)'); 
+answer=inputdlg('Read micrographs from micrographs star file (enter 0) or list in Matlab (enter 1) or from directory (enter 2)'); 
 listm=str2num(answer{1});
 if (listm~=0 && listm~=1 && listm~=2)
     error('entry not 0 or 1 or 2');
@@ -122,11 +122,16 @@ if (maskin~=0 && maskin~=1)
     error('entry not 0 or 1');
 elseif (maskin==1)
     maskpath = uigetdir(path,'Select the masks directory');
-end        
-answer=inputdlg('Do you want just Relion file output (enter 0) or both Relion & Matlab output (enter 1) or Relion, Matlab, & figures (enter 2)'); 
+end     
+answer=inputdlg('Do you want FibrilFinder to try to remove grid regions from images? 1=yes, 0=no. Probably not useful if using masks'); 
+gridrem=str2num(answer{1});
+if (gridrem~=0 && gridrem~=1)
+    error('entry not 0 or 1');
+end   
+answer=inputdlg('Do you want just Relion file output (enter 0) or both Relion & Matlab output (enter 1) or Relion, Matlab, & figures (enter 2) or masked figure only (enter -1)'); 
 mout=str2num(answer{1});
-if (mout~=0 && mout~=1 && mout~=2)
-    error('entry not 0 or 1 or 2');
+if (mout~=0 && mout~=1 && mout~=2 && mout~=-1)
+    error('entry not 0 or 1 or 2 or -1');
 else 
     switch listm
     case 2
@@ -145,7 +150,7 @@ else
         pathout = uigetdir(relionpath,'Select the manual pick micrographs directory');
         %pathout = strcat(pathout,'/Micrographs');
         %mkdir(pathout);
-        [file,path] = uigetfile(strcat(relionpath,'/micrographs_ctf.star'),'Select the CtfFind micrographs_ctf.star file');
+        [file,path] = uigetfile(relionpath,'Select the micrographs star file');
         [s, o] = ReadSTARfile3_1_f(strcat(path,file));
         %s = ReadSTARfile_f(strcat(path,file));
         mics = s.totalparticles; % here this is the number of micrographs
@@ -181,13 +186,20 @@ if (cores==1)
         relion_file = strcat(pathout,'/',mic2,'_manualpick.star');
         output_file = strcat(pathout,'/',mic2,'.mat');
 
-        [Img_raw,s,mi,ma,av]=ReadMRC(strcat(relionpath,'/',mic));
-        if (maskin==1)
-            [Img_mask,ms,mmi,mma,mav]=ReadMRC(strcat(maskpath,'/',mic2,'.mrc'));
-        else 
+        if (~isfile(relion_file)) %only do if doesn't already exist
+          [Img_raw,s,hdr,extraHeader]=ReadMRC(strcat(relionpath,'/',mic));
+          if (maskin==1)
+            [Img_mask,ms,mhdr,mextraHeader]=ReadMRC(strcat(maskpath,'/',mic2,'.mrc'));
+            %Img_mask=Img_mask+maskadd;
+          else 
             Img_mask=0;
+          end
+          if (gridrem==0)
+            image_proc_v3_nogrid(Img_raw,resize_factor,grid_edge,winSize,convlength,ignore_sm,boxsize,T,maskT,relion_file,output_file,mout,maskin,Img_mask,winDelta);
+          else
+            image_proc_v3(Img_raw,resize_factor,grid_edge,winSize,convlength,ignore_sm,boxsize,T,maskT,relion_file,output_file,mout,maskin,Img_mask,winDelta);
+	  end
         end
-        image_proc_v2(Img_raw,resize_factor,grid_edge,winSize,convlength,ignore_sm,boxsize,T,maskT,relion_file,output_file,mout,maskin,Img_mask);
     end
 else
     % actually may need to edit environment>parallel>preferences to get 
@@ -199,14 +211,21 @@ else
         mic2 = miclist2{m};
         relion_file = strcat(pathout,'/',mic2,'_manualpick.star');
         output_file = strcat(pathout,'/',mic2,'.mat');
-
-        [Img_raw,s,mi,ma,av]=ReadMRC(strcat(relionpath,'/',mic));
-        if (maskin==1)
-            [Img_mask,ms,mmi,mma,mav]=ReadMRC(strcat(maskpath,'/',mic2,'.mrc'));
-        else 
-            Img_mask=0;
-        end
-        image_proc_v2(Img_raw,resize_factor,grid_edge,winSize,convlength,ignore_sm,boxsize,T,maskT,relion_file,output_file,mout,maskin,Img_mask);
+        
+        if (~isfile(relion_file)) %only do if doesn't already exist
+            [Img_raw,s,hdr,extraHeader]=ReadMRC(strcat(relionpath,'/',mic));
+            if (maskin==1)
+                [Img_mask,ms,mhdr,mextraHeader]=ReadMRC(strcat(maskpath,'/',mic2,'.mrc'));
+                %Img_mask=Img_mask+maskadd;
+            else 
+                Img_mask=0;
+            end
+            if (gridrem==0)
+              image_proc_v3_nogrid(Img_raw,resize_factor,grid_edge,winSize,convlength,ignore_sm,boxsize,T,maskT,relion_file,output_file,mout,maskin,Img_mask,winDelta);
+            else
+              image_proc_v3(Img_raw,resize_factor,grid_edge,winSize,convlength,ignore_sm,boxsize,T,maskT,relion_file,output_file,mout,maskin,Img_mask,winDelta);
+	    end
+        end    
     end
 end
 %% runtime
